@@ -37,11 +37,11 @@ Edita `include/config.h` con tus datos (ya están configurados con tus credencia
 
 ```cpp
 // WiFi
-#define WIFI_SSID     "Dario WiFi_IoT"
-#define WIFI_PASSWORD "P!nch0C@st3ll4n0"
+#define WIFI_SSID     "#######"
+#define WIFI_PASSWORD "##########"
 
 // MQTT
-#define MQTT_SERVER   "192.168.1.39"
+#define MQTT_SERVER   "###########"
 
 // Tanque - AJUSTA ESTOS VALORES
 #define TANK_HEIGHT_CM    100.0   // Altura interior del tanque
