@@ -12,8 +12,15 @@
 #include "config.h"
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <ESP8266WiFi.h>
 #include <PubSubClient.h>
-#include <WiFi.h>
+
+// ============================================
+// Variables Globales para Caudal
+// ============================================
+volatile long pulseCount = 0;
+float flowRate = 0.0; // Litros por minuto
+unsigned long flowLastCalcTime = 0;
 
 // ============================================
 // Variables Globales
@@ -23,6 +30,15 @@ PubSubClient mqttClient(wifiClient);
 
 unsigned long lastReadTime = 0;
 bool ledState = false;
+
+// ============================================
+// ISR para el Sensor de Caudal
+// ============================================
+/**
+ * Esta función se llama en cada pulso del sensor de caudal.
+ * 'volatile' es crucial aquí.
+ */
+void IRAM_ATTR pulseCounter() { pulseCount++; }
 
 // ============================================
 // Funciones del Sensor Ultrasónico
@@ -183,35 +199,65 @@ void ensureMQTTConnection() {
 
 /**
  * Calcula el nivel de agua y genera el JSON para publicar
+ * - Si distancia < 28cm (30-2 tolerancia) = error de medición
+ * - Si distancia > 130cm = tanque vacío (0L, 0%)
+ * - Rango válido: 28cm a 130cm, salida limitada a 0-100%
  */
 void calculateAndPublish(float distance) {
-  // Calcular distancia al agua (restando offset del sensor)
-  float distanceToWater = distance - SENSOR_OFFSET_CM;
+  // Distancia mínima válida (sensor offset - tolerancia)
+  float minDistance = SENSOR_OFFSET_CM - MEASUREMENT_TOLERANCE_CM;
+  // Distancia máxima válida (sensor offset + altura tanque)
+  float maxDistance = SENSOR_OFFSET_CM + TANK_HEIGHT_CM;
 
-  // Calcular nivel de agua
-  float waterLevelCm = TANK_HEIGHT_CM - distanceToWater;
+  // Validar rango de medición - muy cerca = error
+  if (distance < minDistance) {
+    Serial.println("⚠ Error: Medición fuera de rango (muy cerca)");
 
-  // Limitar valores
-  if (waterLevelCm < 0)
-    waterLevelCm = 0;
-  if (waterLevelCm > TANK_HEIGHT_CM)
-    waterLevelCm = TANK_HEIGHT_CM;
+    // Publicar JSON con indicador de error
+    JsonDocument doc;
+    doc["distance_cm"] = round(distance * 10) / 10.0;
+    doc["error"] = true;
+    doc["error_msg"] = "fuera_de_rango";
+    doc["rssi"] = WiFi.RSSI();
+
+    char buffer[160];
+    serializeJson(doc, buffer);
+    mqttClient.publish(MQTT_TOPIC, buffer);
+    return;
+  }
+
+  // Si está más allá del fondo, reportar vacío
+  if (distance > maxDistance) {
+    distance = maxDistance;
+  }
+
+  // Calcular nivel de agua (cm desde el fondo)
+  float waterLevelCm = maxDistance - distance;
 
   // Calcular porcentaje y volumen
   float percentage = (waterLevelCm / TANK_HEIGHT_CM) * 100.0;
   float volumeLiters = (percentage / 100.0) * TANK_CAPACITY_L;
 
+  // Limitar a rango válido 0-100%
+  if (percentage > 100.0)
+    percentage = 100.0;
+  if (percentage < 0)
+    percentage = 0;
+  if (volumeLiters > TANK_CAPACITY_L)
+    volumeLiters = TANK_CAPACITY_L;
+  if (volumeLiters < 0)
+    volumeLiters = 0;
+
   // Crear JSON
   JsonDocument doc;
   doc["distance_cm"] = round(distance * 10) / 10.0;
-  doc["water_level_cm"] = round(waterLevelCm * 10) / 10.0;
   doc["volume_liters"] = round(volumeLiters);
   doc["percentage"] = round(percentage * 10) / 10.0;
-  doc["sensor_offset_cm"] = SENSOR_OFFSET_CM;
+  doc["flow_L_per_min"] = round(flowRate * 100) / 100.0;
   doc["rssi"] = WiFi.RSSI();
 
   // Serializar y publicar
-  char buffer[256];
+  char buffer[160];
   serializeJson(doc, buffer);
 
   if (mqttClient.publish(MQTT_TOPIC, buffer)) {
@@ -222,27 +268,31 @@ void calculateAndPublish(float distance) {
 }
 
 // ============================================
-// Setup y Loop Principal
+// Setup Principal
 // ============================================
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
   delay(1000);
 
   Serial.println();
   Serial.println("==================================================");
   Serial.println("  MEDIDOR DE NIVEL DE TANQUE DE AGUA");
-  Serial.println("  ESP32-C3 Super Mini + AJ-SR04M");
+  Serial.println("  NodeMCU ESP8266 + AJ-SR04M + YF-S201");
   Serial.println("==================================================");
   Serial.println();
 
-  // Configurar pines del sensor
+  // Configurar pines del sensor ultrasónico
   pinMode(TRIGGER_PIN, OUTPUT);
   pinMode(ECHO_PIN, INPUT);
   digitalWrite(TRIGGER_PIN, LOW);
 
-  // LED integrado (GPIO8 en ESP32-C3 Super Mini)
-  pinMode(8, OUTPUT);
+  // Configurar pin del sensor de caudal
+  pinMode(FLOW_SENSOR_PIN, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(FLOW_SENSOR_PIN), pulseCounter, RISING);
+
+  // LED desactivado para ahorrar energía
+  // pinMode(LED_BUILTIN, OUTPUT);
 
   // Conectar WiFi
   if (!connectWiFi()) {
@@ -262,17 +312,34 @@ void setup() {
                 READ_INTERVAL_MS / 1000);
 }
 
+// ============================================
+// Loop Principal
+// ============================================
+
 void loop() {
   // Mantener conexión MQTT
   mqttClient.loop();
 
-  // Verificar si es tiempo de leer
+  // Cálculo de caudal (cada segundo)
+  if (millis() - flowLastCalcTime > 1000) {
+    flowLastCalcTime = millis();
+
+    noInterrupts();
+    long currentPulseCount = pulseCount;
+    pulseCount = 0;
+    interrupts();
+
+    float frequency = currentPulseCount / 1.0;
+    flowRate = frequency / FLOW_CALIBRATION_FACTOR;
+  }
+
+  // Verificar si es tiempo de leer y publicar
   if (millis() - lastReadTime >= READ_INTERVAL_MS) {
     lastReadTime = millis();
 
-    // Toggle LED para indicar actividad
-    ledState = !ledState;
-    digitalWrite(8, ledState);
+    // LED desactivado para ahorrar energía
+    // ledState = !ledState;
+    // digitalWrite(LED_BUILTIN, ledState);
 
     // Verificar conexiones
     if (WiFi.status() != WL_CONNECTED) {

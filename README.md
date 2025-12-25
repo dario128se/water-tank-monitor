@@ -1,62 +1,52 @@
-# Medidor de Nivel de Tanque de Agua - ESP32-C3 + PlatformIO
+# Medidor de Nivel de Tanque de Agua
 
-Sistema IoT para monitorear el nivel de agua en un tanque de 1000 litros usando un **ESP32-C3 Super Mini** y sensor ultrasónico **AJ-SR04M**.
+Sistema IoT para monitorear el nivel de agua en un tanque de 1000 litros usando **NodeMCU ESP8266**, sensor ultrasónico **AJ-SR04M** y caudalímetro **YF-S201**.
 
 ## 📦 Componentes
 
 | Componente | Descripción |
 |------------|-------------|
-| ESP32-C3 Super Mini | Microcontrolador con WiFi |
-| AJ-SR04M | Sensor ultrasónico impermeable (2-450cm) |
-| Tanque | 1000 litros |
+| NodeMCU ESP8266 (LoLin) | Microcontrolador con WiFi |
+| AJ-SR04M | Sensor ultrasónico impermeable (20-450cm) |
+| YF-S201 | Sensor de caudal (1-30 L/min) |
+| Panel Solar 6V 5W | Alimentación solar |
+| TP4056 + Boost | Cargador de batería + elevador 5V |
+| Batería 18650 | Almacenamiento de energía |
 
 ## 🔌 Conexiones
 
-```
-ESP32-C3 Super Mini          AJ-SR04M
-┌─────────────────────┐     ┌──────────────┐
-│        3.3V         │─────│     VCC      │
-│        GND          │─────│     GND      │
-│       GPIO4         │─────│     TRIG     │
-│       GPIO5         │─────│     ECHO     │
-└─────────────────────┘     └──────────────┘
-```
+Ver esquema completo en [docs/wiring_diagram.md](docs/wiring_diagram.md)
 
-> ⚠️ **Importante**: El sensor debe montarse en la parte superior del tanque, apuntando hacia abajo.
+```
+NodeMCU LoLin              Sensores
+─────────────              ────────
+D2 (GPIO4)  ──────────────  TRIG (AJ-SR04M)
+D1 (GPIO5)  ──────────────  ECHO (AJ-SR04M)
+D5 (GPIO14) ──────────────  Signal (YF-S201)
+3.3V        ──────────────  VCC sensores
+GND         ──────────────  GND sensores
+VIN         ◄─────────────  5V del Boost
+```
 
 ## 🚀 Instalación
 
-### 1. Requisitos
+### 1. Configurar
 
-- [PlatformIO](https://platformio.org/install) (CLI o extensión VS Code)
-- Cable USB-C para el ESP32-C3
-
-### 2. Configurar el proyecto
-
-Edita `include/config.h` con tus datos (ya están configurados con tus credenciales):
+Edita `include/config.h` con tus datos:
 
 ```cpp
-// WiFi
-#define WIFI_SSID     "#######"
-#define WIFI_PASSWORD "##########"
-
-// MQTT
-#define MQTT_SERVER   "###########"
-
-// Tanque - AJUSTA ESTOS VALORES
-#define TANK_HEIGHT_CM    100.0   // Altura interior del tanque
-#define SENSOR_OFFSET_CM  5.0     // Distancia sensor → agua llena
+#define WIFI_SSID     "Tu_WiFi"
+#define WIFI_PASSWORD "Tu_Password"
+#define MQTT_SERVER   "192.168.1.X"  // IP de tu Raspberry Pi
 ```
 
-### 3. Compilar y subir
+### 2. Compilar y subir
 
 ```bash
-cd water-tank-monitor
-
 # Compilar
 pio run
 
-# Subir al ESP32-C3
+# Subir al NodeMCU
 pio run --target upload
 
 # Ver salida serial
@@ -65,51 +55,51 @@ pio device monitor
 
 ## 📊 Datos MQTT
 
-El dispositivo publica en el topic `water-tank/level`:
+Topic: `water-tank/level`
 
 ```json
 {
-  "distance_cm": 25.4,
-  "water_level_cm": 74.6,
-  "volume_liters": 746,
-  "percentage": 74.6,
-  "sensor_offset_cm": 5.0,
-  "rssi": -45
+  "distance_cm": 65.0,
+  "volume_liters": 650,
+  "percentage": 65.0,
+  "flow_L_per_min": 0,
+  "rssi": -67
 }
 ```
 
-### Recibir datos en la Raspberry Pi
-
-```bash
-mosquitto_sub -h localhost -u nodered -P nodered040873 -t "water-tank/level"
-```
-
-## 🔧 Calibración
+## 🔧 Configuración del Tanque
 
 ```
-    ┌─────────────────┐ ← Sensor AJ-SR04M
-    │ SENSOR_OFFSET   │ ← Distancia sensor → agua llena (ej: 5cm)
-    ├─────────────────┤ ← Nivel máximo agua
-    │                 │
-    │  TANK_HEIGHT    │ ← Altura útil del tanque
-    │                 │
-    └─────────────────┘ ← Fondo del tanque
+     ┌───────────────┐ ← Sensor (en la tapa)
+     │    30 cm      │ ← SENSOR_OFFSET_CM
+     ├───────────────┤ ← Nivel máximo (100% = 1000L)
+     │               │
+     │   100 cm      │ ← TANK_HEIGHT_CM
+     │               │
+     └───────────────┘ ← Fondo (0% = 0L)
 ```
 
-## 📁 Estructura del Proyecto
+Edita en `config.h`:
+- `TANK_HEIGHT_CM`: Altura del agua (fondo → nivel máximo)
+- `SENSOR_OFFSET_CM`: Distancia del sensor al nivel máximo
+- `TANK_CAPACITY_L`: Capacidad total en litros
+
+## 📁 Estructura
 
 ```
 water-tank-monitor/
-├── platformio.ini          # Configuración PlatformIO
+├── platformio.ini      # Configuración PlatformIO
 ├── include/
-│   └── config.h            # Configuración (WiFi, MQTT, tanque)
+│   └── config.h        # WiFi, MQTT, tanque
 ├── src/
-│   └── main.cpp            # Código principal
+│   └── main.cpp        # Código principal
+├── docs/
+│   └── wiring_diagram.md  # Esquema de conexiones
 └── README.md
 ```
 
 ## 🐛 Troubleshooting
 
-- **No conecta WiFi**: Verifica SSID/password. El ESP32-C3 solo soporta 2.4GHz.
-- **No conecta MQTT**: Verifica que Mosquitto esté corriendo en la Raspberry Pi.
-- **Lecturas erráticas**: Asegúrate de que el sensor esté bien fijado y perpendicular.
+- **No conecta WiFi**: El ESP8266 solo soporta 2.4GHz
+- **Lectura mínima ~20cm**: Es la distancia mínima del sensor AJ-SR04M
+- **Error fuera de rango**: Objeto a menos de 28cm del sensor
