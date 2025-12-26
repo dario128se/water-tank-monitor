@@ -11,87 +11,41 @@
                                ▼         ▼
                         ┌─────────────────────┐
                         │   TP4056 + BOOST    │
-                        │                     │
                         │  IN+   IN-          │ ◄── Panel Solar
                         │  B+    B-           │ ◄── Batería 18650
                         │  OUT+  OUT-         │ ──► NodeMCU (5V)
                         └──────┬─────────┬────┘
                                │         │
-                      5V ──────┘         └────── GND
-                               │         │
                                ▼         ▼
 ┌──────────────────────────────────────────────────────────────┐
 │                      NodeMCU ESP8266 LoLin                   │
 │                                                              │
-│   VIN ◄── 5V                              D1 ──► ECHO        │
+│   VIN ◄── 5V Boost                        D1 ──► ECHO        │
 │   GND ◄── GND                             D2 ──► TRIG        │
 │   3.3V ──► VCC sensores                   D5 ──► Caudal      │
-│                                                              │
+│   A0 ◄── B+ (batería)                                        │
 └──────────────────────────────────────────────────────────────┘
-        │                    │                    │
-        │                    │                    │
-        ▼                    ▼                    ▼
-┌──────────────┐    ┌──────────────┐    ┌──────────────┐
-│  AJ-SR04M    │    │   YF-S201    │    │   BATERÍA    │
-│              │    │              │    │              │
-│ VCC ◄─ 3.3V  │    │ Rojo ◄─ 3.3V │    │    18650     │
-│ GND ◄─ GND   │    │ Negro ◄─ GND │    │   3.7V       │
-│ TRIG ─► D2   │    │ Amarillo ─►D5│    │              │
-│ ECHO ─► D1   │    │              │    │  (+)   (-)   │
-└──────────────┘    └──────────────┘    └──────────────┘
 ```
 
----
+##  Conexiones
 
-## 📋 Tabla de Pines
+| NodeMCU | Destino | Descripción |
+|:-------:|:--------|:------------|
+| VIN | Boost OUT+ | Alimentación 5V |
+| GND | GND común | Tierra |
+| 3.3V | VCC sensores | Alimentación sensores |
+| A0 | B+ (TP4056) | Voltaje batería directo |
+| D2 | AJ-SR04M TRIG | Disparo ultrasónico |
+| D1 | AJ-SR04M ECHO | Eco ultrasónico |
+| D5 | YF-S201 Amarillo | Pulsos caudal |
 
-### NodeMCU → Sensor Ultrasónico AJ-SR04M
-
-| NodeMCU | Sensor | Color Cable |
-|:-------:|:------:|:-----------:|
-| 3.3V | VCC | 🔴 Rojo |
-| GND | GND | ⚫ Negro |
-| D2 | TRIG | 🟡 Amarillo |
-| D1 | ECHO | 🟢 Verde |
-
-### NodeMCU → Caudalímetro YF-S201
-
-| NodeMCU | Sensor | Color Cable |
-|:-------:|:------:|:-----------:|
-| 3.3V | Rojo | 🔴 Rojo |
-| GND | Negro | ⚫ Negro |
-| D5 | Amarillo | 🟡 Amarillo |
-
-### Alimentación
-
-| Origen | Destino |
-|:------:|:-------:|
-| Panel (+) | TP4056 IN+ |
-| Panel (-) | TP4056 IN- |
-| Batería (+) | TP4056 B+ |
-| Batería (-) | TP4056 B- |
-| Boost OUT+ | NodeMCU VIN |
-| Boost OUT- | NodeMCU GND |
-
----
-
-## ⚠️ Notas Importantes
-
-1. **Todos los GND deben estar conectados entre sí**
-2. **Sensores a 3.3V** (no a 5V)
-3. **Cortar el conector DC** del panel solar y conectar cables directamente
-4. **Orientar el panel** hacia el norte (hemisferio sur)
-
----
-
-## 🛒 Lista de Componentes
+## 🛒 Componentes
 
 | ✓ | Componente |
 |:-:|:-----------|
 | ✅ | NodeMCU ESP8266 |
 | ✅ | Sensor AJ-SR04M |
-| ✅ | Batería 18650 |
-| ✅ | Portapilas |
+| ✅ | Batería 18650 + Portapilas |
 | ⬜ | Panel Solar 6V 5W |
 | ⬜ | Sensor YF-S201 |
 | ⬜ | TP4056 + Boost |

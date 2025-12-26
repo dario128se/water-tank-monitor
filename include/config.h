@@ -54,6 +54,17 @@
 #define MEASUREMENT_TOLERANCE_CM 2.0
 
 // ============================================
+// Configuración de Batería (Divisor de voltaje)
+// ============================================
+// Resistencias: R1=100K, R2=33K
+// Ratio = R2 / (R1 + R2) = 33 / 133 = 0.248
+#define BATTERY_R1 100000.0 // 100K ohms
+#define BATTERY_R2 33000.0  // 33K ohms
+#define BATTERY_MAX_V 4.2   // Voltaje máximo batería 18650
+#define BATTERY_MIN_V 3.0   // Voltaje mínimo batería 18650
+#define ADC_MAX_VALUE 1024  // ESP8266 ADC es de 10 bits
+
+// ============================================
 // Configuración de Intervalos
 // ============================================
 // Intervalo entre lecturas (en milisegundos)

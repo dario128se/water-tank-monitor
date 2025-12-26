@@ -41,6 +41,34 @@ bool ledState = false;
 void IRAM_ATTR pulseCounter() { pulseCount++; }
 
 // ============================================
+// Función de Lectura de Batería
+// ============================================
+/**
+ * Lee el voltaje de la batería usando divisor de voltaje en A0
+ * @return Porcentaje de batería (0-100)
+ */
+int readBatteryPercent() {
+  int adcValue = analogRead(A0);
+
+  // NodeMCU A0 mide 0-3.3V (tiene divisor interno 220K/100K)
+  // A0 conectado directo a B+ del TP4056
+  float batteryVoltage = (adcValue / 1023.0) * 4.2; // Calibrado para 18650
+
+  // Convertir a porcentaje (3.0V = 0%, 4.2V = 100%)
+  float percentage =
+      ((batteryVoltage - BATTERY_MIN_V) / (BATTERY_MAX_V - BATTERY_MIN_V)) *
+      100.0;
+
+  // Limitar a 0-100
+  if (percentage > 100)
+    percentage = 100;
+  if (percentage < 0)
+    percentage = 0;
+
+  return (int)percentage;
+}
+
+// ============================================
 // Funciones del Sensor Ultrasónico
 // ============================================
 
@@ -254,10 +282,11 @@ void calculateAndPublish(float distance) {
   doc["volume_liters"] = round(volumeLiters);
   doc["percentage"] = round(percentage * 10) / 10.0;
   doc["flow_L_per_min"] = round(flowRate * 100) / 100.0;
+  doc["battery_percent"] = readBatteryPercent();
   doc["rssi"] = WiFi.RSSI();
 
   // Serializar y publicar
-  char buffer[160];
+  char buffer[200];
   serializeJson(doc, buffer);
 
   if (mqttClient.publish(MQTT_TOPIC, buffer)) {

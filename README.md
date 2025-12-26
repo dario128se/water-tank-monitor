@@ -23,6 +23,7 @@ NodeMCU LoLin              Sensores
 D2 (GPIO4)  ──────────────  TRIG (AJ-SR04M)
 D1 (GPIO5)  ──────────────  ECHO (AJ-SR04M)
 D5 (GPIO14) ──────────────  Signal (YF-S201)
+A0          ◄──────────────  B+ (batería directo)
 3.3V        ──────────────  VCC sensores
 GND         ──────────────  GND sensores
 VIN         ◄─────────────  5V del Boost
@@ -63,6 +64,7 @@ Topic: `water-tank/level`
   "volume_liters": 650,
   "percentage": 65.0,
   "flow_L_per_min": 0,
+  "battery_percent": 85,
   "rssi": -67
 }
 ```
