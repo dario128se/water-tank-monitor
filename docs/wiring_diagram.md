@@ -12,7 +12,7 @@
                         ┌─────────────────────┐
                         │   TP4056 + BOOST    │
                         │  IN+   IN-          │ ◄── Panel Solar
-                        │  B+    B-           │ ◄── Batería 18650
+                        │  B+    B-           │ ◄── 4x Baterías en paralelo
                         │  OUT+  OUT-         │ ──► NodeMCU (5V)
                         └──────┬─────────┬────┘
                                │         │
@@ -27,14 +27,35 @@
 └──────────────────────────────────────────────────────────────┘
 ```
 
-##  Conexiones
+## 🔋 4 Baterías 18650 en Paralelo
+
+```
+    Batería 1    Batería 2    Batería 3    Batería 4
+       (+)          (+)          (+)          (+)
+        │            │            │            │
+        └────────────┴────────────┴────────────┤
+                                               │
+                                               ▼
+                                         B+ (TP4056)
+        
+       (-)          (-)          (-)          (-)
+        │            │            │            │
+        └────────────┴────────────┴────────────┤
+                                               │
+                                               ▼
+                                         B- (TP4056)
+```
+
+**Resultado:** 3.7V nominal con capacidad total sumada (~4000mAh estimado real)
+
+## 📋 Conexiones
 
 | NodeMCU | Destino | Descripción |
 |:-------:|:--------|:------------|
 | VIN | Boost OUT+ | Alimentación 5V |
 | GND | GND común | Tierra |
 | 3.3V | VCC sensores | Alimentación sensores |
-| A0 | B+ (TP4056) | Voltaje batería directo |
+| A0 | B+ (TP4056) | Voltaje batería |
 | D2 | AJ-SR04M TRIG | Disparo ultrasónico |
 | D1 | AJ-SR04M ECHO | Eco ultrasónico |
 | D5 | YF-S201 Amarillo | Pulsos caudal |
@@ -45,7 +66,7 @@
 |:-:|:-----------|
 | ✅ | NodeMCU ESP8266 |
 | ✅ | Sensor AJ-SR04M |
-| ✅ | Batería 18650 + Portapilas |
-| ⬜ | Panel Solar 6V 5W |
-| ⬜ | Sensor YF-S201 |
-| ⬜ | TP4056 + Boost |
+| ✅ | 4x Batería 18650 |
+| ✅ | Panel Solar 6V 5W |
+| ✅ | Sensor YF-S201 |
+| ✅ | TP4056 + Boost |
