@@ -48,10 +48,10 @@
 
 // Distancia del sensor al nivel máximo de agua (en cm)
 // Sensor en la tapa, 30cm sobre el nivel de llenado
-#define SENSOR_OFFSET_CM 30.0
+#define SENSOR_OFFSET_CM 33.0
 
 // Tolerancia para mediciones fuera de rango (en cm)
-#define MEASUREMENT_TOLERANCE_CM 2.0
+#define MEASUREMENT_TOLERANCE_CM 5.0
 
 // ============================================
 // Configuración de Batería (Divisor de voltaje)

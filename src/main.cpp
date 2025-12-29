@@ -250,7 +250,7 @@ void calculateAndPublish(float distance) {
 
     char buffer[160];
     serializeJson(doc, buffer);
-    mqttClient.publish(MQTT_TOPIC, buffer);
+    mqttClient.publish(MQTT_TOPIC, buffer, true);
     return;
   }
 
@@ -289,7 +289,7 @@ void calculateAndPublish(float distance) {
   char buffer[200];
   serializeJson(doc, buffer);
 
-  if (mqttClient.publish(MQTT_TOPIC, buffer)) {
+  if (mqttClient.publish(MQTT_TOPIC, buffer, true)) {
     Serial.printf("✓ Publicado: %s\n", buffer);
   } else {
     Serial.println("✗ Error al publicar");
